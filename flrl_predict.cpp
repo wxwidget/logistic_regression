@@ -136,7 +136,7 @@ int main(int argc, char* argv[])
             }
         }
         features["b"] = 1;
-        cout << features.size() << " " << model.classify(features) << " " << strs[0] << endl;
+        cout << features.size() << " " << (model.classify(features) > 0.5 ? 1: 0) << " " << strs[0] << endl;
     }
     return 0;
 }
