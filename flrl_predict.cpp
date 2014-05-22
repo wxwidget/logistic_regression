@@ -119,9 +119,7 @@ int main(int argc, char* argv[])
         vector<string> strs;
         features.clear();
         boost::split(strs, line, boost::is_any_of("\t "));
-        double target = 0;//boost::lexical_cast<double>(strs[0]);
-        if (strs[0] == "+1") target = 1;
-        //double target = boost::lexical_cast<double>(strs[0]);
+        double target =  boost::lexical_cast<double>(strs[0]);
         for (unsigned int i = 1; i < strs.size(); ++i)
         {
             vector<string> kvs;
@@ -136,7 +134,8 @@ int main(int argc, char* argv[])
             }
         }
         features["b"] = 1;
-        cout << features.size() << " " << (model.classify(features) > 0.5 ? 1: 0) << " " << strs[0] << endl;
+        double t = model.classify(features);
+        cout << t  << "\t" << target << endl;
     }
     return 0;
 }

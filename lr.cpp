@@ -1,128 +1,165 @@
-#include <boost/numeric/ublas/vector.hpp>
-#include <boost/numeric/ublas/matrix.hpp>
-#include <boost/algorithm/string.hpp>
-#include <boost/tokenizer.hpp>
-#include <boost/lexical_cast.hpp>
+//http://people.csail.mit.edu/jrennie/writing/lr.pdf  y=+1,-1
+#include <iostream>
+#include <cmath>
+#include <memory>
 #include <fstream>
+#include "data.h"
 using namespace std;
-namespace ublas = boost::numeric::ublas;
-class LR
-{
+class LR {
 public:
-    double norm(const ublas::vector<double>& v1, const ublas::vector<double>& v2)
-    {
-        assert(v1.size() == v2.size());
+    double** scale(double**x,int m, int n){
+        double** scale_x = dmatrix(m,n);
+        for(int i = 0; i < n ;++i){//feature
+            double mean = 0.0;
+            double var = 0.0;
+            for(int j = 0; j < m; j++){
+                mean += x[j][i];
+                var += x[j][i] * x[j][i];
+            }
+            mean = mean/m;
+            var = var/m - mean * mean;
+            for(int j = 0; j < m; j++){
+                scale_x[j][i] = (x[j][i] - mean)/var;
+            }
+        }
+        return scale_x;
+    }
+    static double inner_prod(const double* v1, const double* v2, int n) {
+        double r = 0.0;
+        for(int i = 0; i < n; ++i) {
+            r += v1[i] * v2[i];
+        }
+        return r;
+    }
+    double distance(const double* v1, const double* v2, int n) {
         double sum = 0;
-        for(size_t i = 0; i < v1.size(); ++i)
-        {
-            double minus = v1(i) - v2(i);
+        for(int i = 0; i < n; ++i) {
+            double minus = v1[i] - v2[i];
             double r = minus * minus;
             sum += r;
         }
         return sqrt(sum);
     }
-    double sigmoid(double x)
-    {
+    double sigmoid(double x) {
         double e = 2.718281828;
+        if (x >= 10){
+            return 1.0 / (1.0 + pow(e, -10));
+        }else if (x <= -10){
+            return 1.0 / (1.0 + pow(e, 10));
+        }
         return 1.0 / (1.0 + pow(e, -x));
     }
-    double classify(const ublas::vector<double>& x)
-    {
-        double y =  inner_prod(x, mWeightNew);
+    int binary(double* x){
+        return inner_prod(x, _weight_new, _dim) + _bias > 0;
+    }
+    double h(double* x) {
+        return h(x, _weight_new, _dim, _bias);
+    }
+    double h(double* x, double* weight, int n, double bias) {
+        double y =  inner_prod(x, weight, n) + bias;
         return sigmoid(y);
     }
-    //http://people.csail.mit.edu/jrennie/writing/lr.pdf
-    // y: +1,-1
-    void train(ublas::matrix<double>& x, ublas::vector<double>& y, double regularization = 0.5)
-    {
-        int max_iters = 40;
-        mWeightOld.resize(x.size2(), 0);
-        mWeightNew.resize(x.size2(), 0);
-        for(int iter = 0; iter < max_iters; ++iter)
-        {
-            // update each weight
-            for(size_t k = 0; k < mWeightNew.size(); ++k)
-            {
-                double gradient = 0;
-                for(size_t i = 0; i < x.size1(); ++i)
-                {
-                    double z_i = 0;
-                    for(size_t j = 0; j < mWeightOld.size(); ++j)
-                    {
-                        z_i += mWeightOld(j) * x(i, j);
-                    }
-                    gradient += y(i) * x(i, k) * sigmoid(-y(i) * z_i);
+    //y: 0,1
+    double fit(double**nx, int m, int n, double* y, double alpha = 0.01, double l2 = 0.0, double l1=0.0) {
+        int max_iters = 4000;
+        memset(_weight_old, 0, sizeof(_weight_old[0])*_dim);
+        memset(_weight_new, 0, sizeof(_weight_new[0])*_dim);
+        //double** x = scale(nx, m, n);
+        double**x = nx;
+        double* predict = new double[m];
+        auto_ptr<double> ptr(predict);
+        double last_mrse = 1e10;
+        for(int iter = 0; iter < max_iters; ++iter) {
+            //predict
+            double mrse = 0;
+            for(int i = 0; i < m; ++i) {
+                predict[i] = h(x[i], _weight_old, _dim, _bias_old);
+                mrse += (y[i] - predict[i]) * (y[i] - predict[i]);
+            }
+            //cout << "mrse:" << sqrt(mrse/m) << endl;
+            if (last_mrse - mrse < 0.0001){
+                return mrse;
+            }
+            last_mrse = mrse;
+            std::swap(_weight_old, _weight_new);
+            _bias = _bias_old;
+            //update each weight
+            for(int k = 0; k < _dim; ++k) {
+                double gradient = 0.0;
+                for(int i = 0; i < m; ++i) {
+                    gradient += (predict[i] - y[i]) * x[i][k];
                 }
-                mWeightNew(k) = mWeightOld(k) + sLearningRate * gradient - sLearningRate * regularization * mWeightOld(k);
+                _weight_new[k] = _weight_old[k] - alpha * gradient/m - l2 * _weight_old[k];
+                //if (_weight_new[k] < 1e-5){ _weight_new[k] = 0; }
             }
-            double dist = norm(mWeightNew, mWeightOld);
-            if(dist < sConvergenceRate)
-            {
-                break;
+            //update bias
+            double g = 0.0;
+            for(int i = 0; i < m; ++i) {
+                g += (predict[i] - y[i]);
             }
-            mWeightOld.swap(mWeightNew);
+            _bias_old = _bias - alpha * g/m - l2 * _bias;
         }
+        return distance(_weight_new, _weight_old, _dim);
     }
-    void save(std::ostream& os)
-    {
-        for (unsigned int i = 0; i < mWeightNew.size(); ++i)
-            os <<  mWeightNew[i] << " " ;
+    void save(std::ostream& os) {
+        os << "b:" << _bias << " ";
+        for(int i = 0; i < _dim; ++i)
+            os <<  i << ":" << _weight_new[i] << " " ;
         os << endl;
     }
+    LR(int dim): _dim(dim) {
+        _weight_new = new double[dim];
+        _weight_old = new double[dim];
+        _bias = 0.0;
+        _bias_old = 0.0;
+    }
+    ~LR() {
+        delete[] _weight_old;
+        delete[] _weight_new;
+    }
 private:
-    ublas::vector<double> mWeightOld;
-    ublas::vector<double> mWeightNew;
-    static const double sConvergenceRate = 0.0001;
-    static const double sLearningRate = 0.0005;
+    double* _weight_old;
+    double* _weight_new;
+    int _dim;
+    double _bias;
+    double _bias_old;
 };
-int main(int argc, char* argv[])
-{
-    if(argc != 4)
-    {
-        cout << "Usage: " << argv[0] << " <data_file> <instance_count> <feature_count>" << endl
-             << "\t data_file: the training date\n"
-             << "\t instance_count: the trainning instance count in data_file\n"
-             << "\t feature_count: the feature count in data_file, including bias\n";
+int main(int argc, char* argv[]) {
+    if(argc < 4) {
+        cerr << "Usage: " << argv[0] << " <train_feature> <train_target> <rows> <cols> [test]" << endl
+             << "\t data_file: the training date\n";
         return -1;
     }
-    ifstream ifs(argv[1]);
-    string line;
-    
-    int row = boost::lexical_cast<int>(argv[2]);
-    int col = boost::lexical_cast<int>(argv[3]);
-    ublas::matrix<double> x(row, col);
-    ublas::vector<double> y(row);
-    int cur_row = 0;
-    //cerr << "rows:" << row << " col:" << col << endl;
-    while(getline(ifs, line))
-    {
-        //libsvm format 
-        //<class/target> [<attribute number>:<attribute value>]*
-        vector<string> strs;
-        boost::split(strs, line, boost::is_any_of("\t "),boost::algorithm::token_compress_on);
-        double target = -1;//boost::lexical_cast<double>(strs[0]);
-        if (strs[0] == "+1") target = 1;
-        for (unsigned int i = 1; i < strs.size(); ++i)
-        {
-            vector<string> kvs;
-            boost::split(kvs, strs[i], boost::is_any_of(":"),boost::algorithm::token_compress_on);
-            if (kvs.size()==2) 
-            {
-                int index = boost::lexical_cast<int>(kvs[0]);
-                x(cur_row, index) = boost::lexical_cast<double>(kvs[1]);
-            }
-            else if (kvs.size() == 1 && !kvs[0].empty())
-            {
-                int index = boost::lexical_cast<int>(kvs[0]);
-                x(cur_row, index) = 1;
-            }
-        }
-        x(cur_row,0) = 1;//bias
-        y(cur_row) = target;
-        cur_row++;
-    }
-    LR model;
-    model.train(x, y);
+    const char* feature = argv[1];
+    const char* target = argv[2];
+    int row = atoi(argv[3]);
+    int col = atoi(argv[4]); //add bias
+    double**x = dmatrix(row, col);
+    double* y = dvector(row);
+    //load_data(train_instance, x,y);  //if train_target\ttrain_feature are merged in one file
+    load_feature(feature, x);
+    load_target(target, y);
+    LR model(col);
+    model.fit(x, row, col, y, 0.1);
     model.save(std::cout);
+    double** confuse = dmatrix(2, 2);
+    for(int i = 0; i < row; ++i) {
+        int pred = model.binary(x[i]);
+        int label = (int)y[i];
+        confuse[label][pred]++;
+    }
+    cerr << "L\t0\t1\tprecision\tsupprt<-prdict\n";
+    double label0 = confuse[0][0] + confuse[0][1];
+    double label1 = confuse[1][0] + confuse[1][1];
+    cerr << "0\t" << confuse[0][0] << "\t" << confuse[0][1] << "\t" << confuse[0][0]/label0 << "\t" << label0 << endl;
+    cerr << "1\t" << confuse[1][0] << "\t" << confuse[1][1] << "\t" << confuse[1][1]/label1 << "\t" << label1 << endl;
+    if(argc == 6) {
+        ifstream test(argv[5]);
+        string line;
+        while(getline(test, line)) {
+            read_csv(line.c_str(), x[0]);
+            cerr << model.h(x[0]) << endl;
+        }
+    }
     return 0;
 }

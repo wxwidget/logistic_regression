@@ -1,3 +1,7 @@
+/*
+ * https://kaggle2.blob.core.windows.net/competitions/kddcup2012/2748/media/OperaSlides.pdf
+ * http://people.csail.mit.edu/jrennie/writing/lr.pdf
+ */
 #include <boost/numeric/ublas/vector.hpp>
 #include <boost/numeric/ublas/io.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
@@ -33,38 +37,9 @@ public:
         double y =  inner_prod(x, mWeightNew);
         return sigmoid(y);
     }
-    //http://people.csail.mit.edu/jrennie/writing/lr.pdf
     // y: +1,-1
     void train(ublas::matrix<double>& x, ublas::vector<double>& pos, ublas::vector<double>& neg,double regularization = 0.1)
     {
-        int max_iters = 20;
-        mWeightOld.resize(x.size2(), 0);
-        mWeightNew.resize(x.size2(), 0);
-        for(int iter = 0; iter < max_iters; ++iter)
-        {
-            for(size_t k = 0; k < mWeightNew.size(); ++k)
-            {
-                double gradient = 0;
-                for(size_t i = 0; i < x.size1(); ++i)
-                {
-                    double z_i = 0;
-                    for(size_t j = 0; j < mWeightOld.size(); ++j)
-                    {
-                        z_i += mWeightOld(j) * x(i, j);
-                    }
-                    gradient += x(i, k) * sigmoid(-z_i) * pos(i);
-                    gradient += -x(i, k) * sigmoid(z_i) * neg(i);
-                }
-                mWeightNew(k) = mWeightOld(k) + sLearningRate * gradient - sLearningRate * regularization * mWeightOld(k);
-            }
-            std::cout <<  mWeightNew << std::endl;
-            double dist = norm(mWeightNew, mWeightOld);
-            if(dist < sConvergenceRate)
-            {
-                break;
-            }
-            mWeightOld.swap(mWeightNew);
-        }
     }
     ublas::vector<double> mWeightOld;
     ublas::vector<double> mWeightNew;

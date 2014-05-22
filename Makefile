@@ -11,13 +11,13 @@ all: $(subst .cpp,.o,$(SOURCES))  lr flrl flrl_predict
 
 %.O: %.cpp
 		$(CXX) $(CPPFLAGS) ${LIBS} $^ $@
-lr: lr.cpp 
-		$(CXX) $(CPPFLAGS) $^  ${LIBS} -o $@
+lr: lr.cpp data.o
+		$(CXX) $(CPPFLAGS)  $^ ${LIBS} -o $@
 
 olr: online_lr.cpp 
 		$(CXX) $(CPPFLAGS) $^  ${LIBS} -o $@
 
-flrl: flrl.cpp 
+flrl: flrl.cpp data.o
 		$(CXX) $(CPPFLAGS) $^  ${LIBS} -o $@
 
 flrl_predict: flrl_predict.cpp 
