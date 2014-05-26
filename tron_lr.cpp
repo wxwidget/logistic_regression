@@ -4,7 +4,6 @@
 #include <memory>
 #include <fstream>
 #include "data.h"
-#include "lbfgs.h"
 using namespace std;
 typedef struct instance_t{
     double** x;
@@ -18,8 +17,8 @@ typedef struct instance_t{
 }instance;
 
 template<typename T1, typename T2>
-static lbfgsfloatval_t dot(const T1* x, const T2* y, int n) {
-    lbfgsfloatval_t r = 0;
+static float dot(const T1* x, const T2* y, int n) {
+    float r = 0;
     for(int i = 0; i < n; ++i) {
         r += x[i] * y[i];
     }
@@ -41,24 +40,24 @@ static  FType sigmoid(FType x) {
     return 1.0 / (1.0 + pow(e, -x));
 }
 template<typename T1, typename T2>
-static lbfgsfloatval_t predict(const T1* x, const T2* weight, int n) {
+static float predict(const T1* x, const T2* weight, int n) {
     return sigmoid(dot(x,weight,n));
 }
-static lbfgsfloatval_t evaluate(void *ins, const lbfgsfloatval_t *w, lbfgsfloatval_t *g, const int n, const lbfgsfloatval_t step) {
-    lbfgsfloatval_t e = 2.718281828;
-    lbfgsfloatval_t fx = 0.0;
+static float evaluate(void *ins, const float *w, float *g, const int n, const float step) {
+    float e = 2.718281828;
+    float fx = 0.0;
     instance* data = (instance*)ins; 
     double** x = data->x;
     double* y = data->y;
     for(int i = 0; i < n; ++i){//for variable
         for (int j = 0;j < data->row; ++j){ //for instance
-            lbfgsfloatval_t p = predict(x[j], w, n);//predict instance
+            float p = predict(x[j], w, n);//predict instance
             g[i] += (p - y[j])*x[j][i];
         }
         g[i] = g[i]/data->row + w[i];
     }
     for (int j = 0;j < data->row; ++j){//for instance
-        lbfgsfloatval_t wx = dot(x[j], w,n);
+        float wx = dot(x[j], w,n);
         if (y[j] < 0.5){//y[i] == 0
             fx +=  log(1+pow(e, wx));
         }
@@ -68,23 +67,6 @@ static lbfgsfloatval_t evaluate(void *ins, const lbfgsfloatval_t *w, lbfgsfloatv
     }
     fx = fx/data->row + dot(w,w,n)/2;
     return fx;
-}
-static int progress(
-    void *instance,
-    const lbfgsfloatval_t *x,
-    const lbfgsfloatval_t *g,
-    const lbfgsfloatval_t fx,
-    const lbfgsfloatval_t xnorm,
-    const lbfgsfloatval_t gnorm,
-    const lbfgsfloatval_t step,
-    int n,
-    int k,
-    int ls)
-{
-    printf("Iteration %d:\n", k);
-    printf("  xnorm = %f, gnorm = %f, step = %f\n", xnorm, gnorm, step);
-    printf("\n");
-    return 0;
 }
 int main(int argc, char* argv[]) {
     if(argc < 4) {
@@ -104,11 +86,8 @@ int main(int argc, char* argv[]) {
     load_feature(feature, ins.x);
     load_target(target, ins.y);
 
-    lbfgs_parameter_t param;
-    lbfgs_parameter_init(&param);
-    lbfgsfloatval_t *w =  lbfgs_malloc(col);
-    lbfgsfloatval_t fx;
-    lbfgs(col, w, &fx, evaluate, progress, &ins, &param);
+    float fx;
+    //lbfgs(col, w, &fx, evaluate, progress, &ins, &param);
 
     double** confuse = dmatrix(2, 2);
     for(int i = 0; i < row; ++i) {
@@ -125,6 +104,5 @@ int main(int argc, char* argv[]) {
     double label1 = confuse[1][0] + confuse[1][1];
     cout << "0\t" << confuse[0][0] << "\t" << confuse[0][1] << "\t" << confuse[0][0]/label0 << "\t" << label0 << endl;
     cout << "1\t" << confuse[1][0] << "\t" << confuse[1][1] << "\t" << confuse[1][1]/label1 << "\t" << label1 << endl;
-    lbfgs_free(w);
     return 0;
 }
