@@ -1,4 +1,4 @@
-//http://people.csail.mit.edu/jrennie/writing/lr.pdf  y=+1,-1
+//http://stat.rutgers.edu/home/tzhang/papers/nips13-svrg.pdf
 #include <iostream>
 #include <cmath>
 #include <memory>

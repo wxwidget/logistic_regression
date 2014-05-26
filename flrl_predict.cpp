@@ -40,35 +40,6 @@ public:
         if (x<0) return(-1);
         return(0); 
     }
-    // y: +1,0
-    double update(const unordered_map<string, double>& x, double target, double L1, double L2,  double iter)
-    {
-        unordered_map<string,double>::const_iterator it = x.begin();
-        for(; it != x.end(); ++it)
-        {
-            const string& name = it->first;
-            if (fabs(zi[name]) <= L1)
-            {
-                weight[name] = 0;
-            }
-            else
-            {
-                weight[name] = -1/((beta + sqrt(ni[name]))/alpha + L2) * (zi[name] - sgn(zi[name])*L1);
-            }
-        }
-        double pt = classify(x); 
-        it = x.begin();
-        for(; it != x.end(); ++it)
-        {
-           const string& name = it->first;
-           double value = it->second;
-           double gi = (pt - target) * value;
-           double thi = (sqrt(ni[name] + gi * gi) - sqrt(ni[name]))/alpha;
-           zi[name] += gi - thi * weight[name];
-           ni[name] += gi * gi;
-        }
-        return 0;
-    }
     void load(istream& in)
     {
         string line;
