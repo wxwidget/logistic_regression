@@ -22,11 +22,6 @@ class LR {
 public:
     LR(double a, double b = 1): alpha(a), beta(b) {
         largerConstrain.insert("month_ipv");
-        largerConstrain.insert("week_ipv");
-        largerConstrain.insert("week_ipv_uv");
-        largerConstrain.insert("month_ipv_uv");
-        largerConstrain.insert("month_alipay_num");
-        largerConstrain.insert("week_alipay_num");
     }
     double sigmoid(double x) {
         double e = 2.718281828;

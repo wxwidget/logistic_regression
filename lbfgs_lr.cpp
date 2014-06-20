@@ -101,7 +101,7 @@ int main(int argc, char* argv[]) {
     ins.y = dvector(row);
     ins.row = row;
     ins.col = col;
-    load_feature(feature, ins.x);
+    csv_load_feature(feature, ins.x);
     load_target(target, ins.y);
 
     lbfgs_parameter_t param;
@@ -120,7 +120,7 @@ int main(int argc, char* argv[]) {
     for(int i = 0; i < col; ++i){
         cout << i <<":" << w[i] << " ";
     }
-    cout << "L\t0\t1\tprecision\tsupprt<-prdict\n";
+    cout << "\nL\t0\t1\tprecision\tsupprt<-prdict\n";
     double label0 = confuse[0][0] + confuse[0][1];
     double label1 = confuse[1][0] + confuse[1][1];
     cout << "0\t" << confuse[0][0] << "\t" << confuse[0][1] << "\t" << confuse[0][0]/label0 << "\t" << label0 << endl;

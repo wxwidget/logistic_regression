@@ -35,7 +35,7 @@ bool ends_with(const string& str, const string& a) {
     }
     return i == n;
 }
-void read_csv(const char* in_string, double*x) {
+void csv_read(const char* in_string, double*x) {
     const char* pos = in_string;
     int i = 0;
     for(; pos - 1 != NULL && pos[0] != '\0' && pos[0] != '#';
@@ -44,7 +44,7 @@ void read_csv(const char* in_string, double*x) {
         x[i++] = value;
     }
 }
-void read_line(const string& line, double* x, double y) {
+void svm_read_line(const string& line, double* x, double y) {
     //libsvm format
     //<class/target> [<attribute number>:<attribute value>]*
     //csv format
@@ -66,21 +66,21 @@ void read_line(const string& line, double* x, double y) {
     }
     y = target;
 }
-void load_data(const string& filename, double** x, double* y) {
+void svm_load(const string& filename, double** x, double* y) {
     int cur_row = 0;
     ifstream ifs(filename.c_str());
     string line;
     while(getline(ifs, line)) {
-        read_line(line, x[cur_row], y[cur_row]);
+        svm_read_line(line, x[cur_row], y[cur_row]);
         cur_row++;
     }
 }
-void load_feature(const char* train_feature, double**x) {
+void csv_load_feature(const char* train_feature, double**x) {
     int cur_row = 0;
     ifstream ifs(train_feature);
     string line;
     while(getline(ifs, line)) {
-        read_csv(line.c_str(), x[cur_row]);
+        csv_read(line.c_str(), x[cur_row]);
         cur_row++;
     }
 }
